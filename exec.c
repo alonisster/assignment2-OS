@@ -10,8 +10,8 @@
 void init_signal_handler(struct proc * curproc){
   for (int i = 0; i < 32; i++)
   {
-    if(curproc->signal_handlers[i].sa_handler != SIG_IGN 
-    || curproc->signal_handlers[i].sa_handler != SIG_DFL)
+    if(curproc->signal_handlers[i].sa_handler != (void*) SIG_IGN 
+    || curproc->signal_handlers[i].sa_handler != (void*) SIG_DFL)
     {
       curproc->signal_handlers[i].sa_handler = SIG_DFL;
       curproc->signal_handlers[i].sigmask = NULL; //check if necesasry.

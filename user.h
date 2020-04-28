@@ -1,5 +1,8 @@
+#define NULL 0
+
 struct stat;
 struct rtcdate;
+struct sigaction;
 
 // system calls
 int fork(void);
@@ -9,7 +12,7 @@ int pipe(int*);
 int write(int, const void*, int);
 int read(int, void*, int);
 int close(int);
-int kill(int);
+int kill(int, int);
 int exec(char*, char**);
 int open(const char*, int);
 int mknod(const char*, short, short);
@@ -25,6 +28,7 @@ int sleep(int);
 int uptime(void);
 uint sigprocmask(uint);
 int sigaction(int signum, struct sigaction * act, struct sigaction* oldact );
+void sigret(void);
 
 // ulib.c
 int stat(const char*, struct stat*);

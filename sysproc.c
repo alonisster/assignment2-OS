@@ -30,10 +30,10 @@ int
 sys_kill(void)
 {
   int pid;
-
-  if(argint(0, &pid) < 0)
+  int signum;
+  if(argint(0, &pid) < 0 || argint(0, &signum) < 0)
     return -1;
-  return kill(pid);
+  return kill(pid, signum);
 }
 
 int
@@ -93,7 +93,7 @@ sys_uptime(void)
 int sys_sigprocmask(void)
 {
   uint sigmask;
-  if(argint(0, &sigmask) < 0)
+  if(argint(0, (int*) &sigmask) < 0)
     return -1;
   return sigprocmask(sigmask);  //returns the old mask
 }
@@ -104,8 +104,14 @@ int sys_sigaction(void) //int signum, const struct sigaction * act, struct sigac
   struct sigaction * act;
   struct sigaction * oldact;
 
-  if(argint(0, &signum) < 0 || (argint(1, &act) < 0) || (argint(2, &oldact) < 0)){
+  if(argint(0, &signum) < 0 || (argint(1, (int*) &act) < 0) || (argint(2, (int*) &oldact) < 0)){
     return -1;
   }
   return sigaction(signum, act, oldact );
+}
+
+int sys_sigret(void){
+  sigret();
+  return 0;
+  //todo- complete in proc.c too XXXX
 }

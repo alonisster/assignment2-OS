@@ -10,4 +10,7 @@ typedef uint pde_t;
 #define SIGSTOP    17
 #define SIGCONT    19
 
-#define NULL 0
+struct sigaction{
+  void (*sa_handler) (int);
+  uint sigmask;
+};

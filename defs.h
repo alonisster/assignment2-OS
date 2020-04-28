@@ -1,3 +1,5 @@
+#define NULL 0
+
 struct buf;
 struct context;
 struct file;
@@ -107,7 +109,7 @@ int             cpuid(void);
 void            exit(void);
 int             fork(void);
 int             growproc(int);
-int             kill(int);
+int             kill(int, int);
 struct cpu*     mycpu(void);
 struct proc*    myproc();
 void            pinit(void);
@@ -120,6 +122,9 @@ void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
 void            yield(void);
+uint            sigprocmask(uint);
+int             sigaction(int signum, struct sigaction * act, struct sigaction* oldact );
+void            sigret(void);
 
 // swtch.S
 void            swtch(struct context**, struct context*);
