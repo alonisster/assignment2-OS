@@ -34,6 +34,11 @@ struct context {
 
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
+struct sigaction{
+  void (*sa_handler) (int);
+  uint sigmask;
+};
+
 // Per-process state
 struct proc {
   uint sz;                     // Size of process memory (bytes)
@@ -49,7 +54,15 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+  uint pending_signals;
+  uint signal_mask;
+  struct sigaction signal_handlers[32];
+  struct trapframe * user_trap_frame_backup;
+
 };
+
+
+
 
 // Process memory is laid out contiguously, low addresses first:
 //   text

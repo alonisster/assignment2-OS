@@ -190,6 +190,14 @@ growproc(int n)
   return 0;
 }
 
+void copySignalHandlers(struct proc * np, struct proc * curproc){
+  for (int i = 0; i < 32; i++)
+  {
+    np->signal_handlers[i].sa_handler = curproc->signal_handlers[i].sa_handler;   //chek if we need to clone handler XXXX
+    np->signal_handlers[i].sigmask = curproc->signal_handlers[i].sigmask;
+  }  
+}
+
 // Create a new process copying p as the parent.
 // Sets up stack to return as if from system call.
 // Caller must set state of returned proc to RUNNABLE.
@@ -215,6 +223,9 @@ fork(void)
   np->sz = curproc->sz;
   np->parent = curproc;
   *np->tf = *curproc->tf;
+
+  np->signal_mask = curproc-> signal_mask;
+  copySignalHandlers(np, curproc);
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
@@ -548,3 +559,27 @@ procdump(void)
     cprintf("\n");
   }
 }
+
+uint sigprocmask(uint mask){
+  struct proc *curproc = myproc();
+  uint oldmask = curproc -> signal_mask;
+  curproc -> signal_mask = mask;
+  return oldmask;
+}
+
+int sigaction(int signum, struct sigaction * act, struct sigaction * oldact ){
+  if(act == NULL)
+    return -1;
+  struct proc *curproc = myproc();
+  if(oldact != NULL){
+    oldact->sa_handler = curproc -> signal_handlers[signum].sa_handler;
+    oldact -> sigmask = curproc -> signal_handlers[signum].sigmask;
+  }
+  curproc -> signal_handlers[signum].sa_handler = act->sa_handler;
+  curproc -> signal_handlers[signum].sigmask = act ->sigmask;
+  return 0;
+
+}
+
+
+
