@@ -540,7 +540,39 @@ kill(int pid, int signum)
   // return -1;
 }
 
+void handleKill(){
+    struct proc * curproc = myproc();
+    curproc->killed = 1;
+    //Wake process from sleep if necessary.
+    if(curproc->state == SLEEPING)
+      curproc->state = RUNNABLE;  
+}
 
+void handleStop(){
+  struct proc * curproc = myproc();
+  //maybe  changing ignore flag for SIGCONT hadler.   
+  int sigCont_bits = 1 << SIGCONT;
+  while(!(curproc->pending_signals & sigCont_bits)){
+    yield();
+  }
+  handleCont();
+}
+
+  // Wake process from sleep if necessary.
+//   if(myproc->state == SLEEPING)
+//     myproc->state = RUNNABLE;  
+// }
+
+void handleCont(){
+  struct proc * curproc = myproc();
+  int sigStopBits = 1 << SIGSTOP ;
+  int sigCont_bits = 1 << SIGCONT;
+  //turning off sigSTP bit in pending signals.
+  if( sigStopBits & curproc->pending_signals){
+    curproc->pending_signals = curproc->pending_signals - sigStopBits;
+    curproc->pending_signals = curproc->pending_signals - sigCont_bits;    
+  }  
+}
 
 //PAGEBREAK: 36
 // Print a process listing to console.  For debugging.
@@ -580,6 +612,11 @@ procdump(void)
 }
 
 uint sigprocmask(uint mask){
+  int sigStp_bits = 1 << SIGSTOP;
+  int sigKill_bits = 1 << SIGKILL;
+  if((sigStp_bits & mask) || (sigKill_bits & mask)){
+    panic("cannot mask stop and kill");     //XXXX
+  }
   struct proc *curproc = myproc();
   uint oldmask = curproc -> signal_mask;
   curproc -> signal_mask = mask;
@@ -587,7 +624,7 @@ uint sigprocmask(uint mask){
 }
 
 int sigaction(int signum, struct sigaction * act, struct sigaction * oldact ){
-  if(act == NULL)
+  if(act == NULL || signum == SIGKILL || signum == SIGSTOP)
     return -1;
   struct proc *curproc = myproc();
   if(oldact != NULL){

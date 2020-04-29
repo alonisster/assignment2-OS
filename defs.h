@@ -125,6 +125,9 @@ void            yield(void);
 uint            sigprocmask(uint);
 int             sigaction(int signum, struct sigaction * act, struct sigaction* oldact );
 void            sigret(void);
+void            handleCont(void);
+void            handleStop(void);
+void            handleKill(void);
 
 // swtch.S
 void            swtch(struct context**, struct context*);
