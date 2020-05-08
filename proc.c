@@ -17,6 +17,9 @@ static struct proc *initproc;
 int nextpid = 1;
 extern void forkret(void);
 extern void trapret(void);
+//invokesigret.S
+extern void invoke_sigret_start(void);
+extern void invoke_sigret_end(void);
 
 static void wakeup1(void *chan);
 
@@ -109,6 +112,8 @@ found:
     p->state = UNUSED;
     return 0;
   }
+  //cleaning pending signals
+  p->pending_signals = 0;
   sp = p->kstack + KSTACKSIZE;
 
   // Leave room for trap frame.
@@ -511,10 +516,10 @@ kill(int pid, int signum)
       return -1;
   
   acquire(&ptable.lock);
-  int signumBit= 1 << signum;   //XXXX
+  int signumBit= 1 << signum;  
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->pid == pid){
-      p->pending_signals = p -> pending_signals || signumBit;
+      p->pending_signals = p -> pending_signals | signumBit;
       release(&ptable.lock);
       return 0;
     }
@@ -541,6 +546,7 @@ kill(int pid, int signum)
 }
 
 void handleKill(){
+    cprintf("%s", "reached handle kill\n");
     struct proc * curproc = myproc();
     curproc->killed = 1;
     //Wake process from sleep if necessary.
@@ -549,13 +555,17 @@ void handleKill(){
 }
 
 void handleStop(){
+  cprintf("%s", "reached handlestop\n");
+
   struct proc * curproc = myproc();
+  curproc->is_stopped =1;
+
   //maybe  changing ignore flag for SIGCONT hadler.   
-  int sigCont_bits = 1 << SIGCONT;
-  while(!(curproc->pending_signals & sigCont_bits)){
-    yield();
-  }
-  handleCont();
+  // int sigCont_bits = 1 << SIGCONT;
+  // while(!(curproc->pending_signals & sigCont_bits) ){
+  //   yield();
+  // }
+  // handleCont();
 }
 
   // Wake process from sleep if necessary.
@@ -565,13 +575,7 @@ void handleStop(){
 
 void handleCont(){
   struct proc * curproc = myproc();
-  int sigStopBits = 1 << SIGSTOP ;
-  int sigCont_bits = 1 << SIGCONT;
-  //turning off sigSTP bit in pending signals.
-  if( sigStopBits & curproc->pending_signals){
-    curproc->pending_signals = curproc->pending_signals - sigStopBits;
-    curproc->pending_signals = curproc->pending_signals - sigCont_bits;    
-  }  
+  curproc->is_stopped =0;
 }
 
 //PAGEBREAK: 36
@@ -612,11 +616,6 @@ procdump(void)
 }
 
 uint sigprocmask(uint mask){
-  int sigStp_bits = 1 << SIGSTOP;
-  int sigKill_bits = 1 << SIGKILL;
-  if((sigStp_bits & mask) || (sigKill_bits & mask)){
-    panic("cannot mask stop and kill");     //XXXX
-  }
   struct proc *curproc = myproc();
   uint oldmask = curproc -> signal_mask;
   curproc -> signal_mask = mask;
@@ -638,7 +637,95 @@ int sigaction(int signum, struct sigaction * act, struct sigaction * oldact ){
 }
 
 void sigret(){
-  //todo
+  struct proc * curproc = myproc();
+  curproc->tf = curproc->user_trap_frame_backup;
+  curproc->signal_mask = curproc->signal_mask_backup;
+}
+
+void handle_all_signals(){
+  struct proc * curproc = myproc();
+  if(curproc ==0){
+    return;
+  }
+  // consider adding another variable to continue the loop from last index point if returned after user signal.
+  int sig_bits = 1;  
+  for (int i = 0; i < 32 && curproc->killed == 0; i++)
+  {
+    if(sig_bits & curproc->pending_signals){
+      // cprintf("%d\n ", i);
+      struct proc * curproc = myproc();
+      void * handler =  curproc ->signal_handlers[i].sa_handler;
+      if(handler == SIG_DFL){
+        switch (i)
+        {
+        case SIGSTOP:
+          handleStop();
+          curproc->pending_signals -= sig_bits;
+          break;
+        case SIGCONT:
+          if(! (curproc->signal_mask & sig_bits)){
+            handleCont();
+            curproc->pending_signals -= sig_bits;
+          }
+          break;
+        case SIGKILL:
+          handleKill();
+          curproc->pending_signals -= sig_bits;
+          break;    
+        default:
+          //if not mentioned to be ignored, we kill the process.
+          if(! (curproc->signal_mask & sig_bits)){
+            handleKill();
+            curproc->pending_signals -= sig_bits;
+          }
+          break;
+        }
+      }     // in case handler isn't default
+      else if(!curproc->is_stopped){ //if(curproc->is_handling_signal == 0){
+        handle_non_default(i);
+        curproc->pending_signals -= sig_bits;
+        return;
+      }      
+    }
+    sig_bits = sig_bits << 1;
+  } 
+
+  if(curproc->is_stopped){
+    yield();
+  }
+  return;
+}
+
+
+void handle_non_default(int signum){
+  
+  struct proc * curproc = myproc();  
+  // curproc->is_handling_signal = 1;
+  struct sigaction act = curproc ->signal_handlers[signum];
+  void * handler = act.sa_handler;
+
+  //backup the tf and mask
+  memmove(curproc->user_trap_frame_backup, curproc->tf, sizeof (*curproc->tf));
+  curproc->signal_mask_backup = curproc->signal_mask;
+
+  //changing mask table to ignore specified signals while executing the handler function.
+  sigprocmask(act.sigmask);
+
+  //inserting ret adress, arguments and jump to function adress
+  int function_mem_size = (uint)&invoke_sigret_end - (uint)&invoke_sigret_start;
+  curproc->tf->esp -= function_mem_size;
+
+  //inserting the commands to esp
+  memmove((void*)curproc->tf->esp, invoke_sigret_start, (uint) function_mem_size);
+
+  int sigret_sender_adr = curproc->tf->esp;
+  curproc->tf->esp -= 4;
+  *((int*)(curproc->tf->esp)) = signum;
+  curproc->tf->esp -= 4;
+  *((int*)(curproc->tf->esp)) = sigret_sender_adr;
+  curproc->tf->eip = (uint) handler; // trapret will resume into signal handler
+  
+  return; 
 }
 
 

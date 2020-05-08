@@ -128,6 +128,8 @@ void            sigret(void);
 void            handleCont(void);
 void            handleStop(void);
 void            handleKill(void);
+void            handle_all_signals(void);
+void            handle_non_default(int);
 
 // swtch.S
 void            swtch(struct context**, struct context*);
