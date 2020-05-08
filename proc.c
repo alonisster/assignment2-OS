@@ -638,7 +638,7 @@ int sigaction(int signum, struct sigaction * act, struct sigaction * oldact ){
 
 void sigret(){
   struct proc * curproc = myproc();
-  curproc->tf = curproc->user_trap_frame_backup;
+  memmove(curproc->tf, curproc->user_trap_frame_backup,sizeof(struct trapframe));
   curproc->signal_mask = curproc->signal_mask_backup;
 }
 
@@ -682,8 +682,8 @@ void handle_all_signals(){
         }
       }     // in case handler isn't default
       else if(!curproc->is_stopped){ //if(curproc->is_handling_signal == 0){
-        handle_non_default(i);
         curproc->pending_signals -= sig_bits;
+        handle_non_default(i);
         return;
       }      
     }
