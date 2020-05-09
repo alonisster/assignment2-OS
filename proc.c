@@ -15,6 +15,7 @@ struct {
 static struct proc *initproc;
 
 int nextpid = 1;
+int counter_lock = 0;
 extern void forkret(void);
 extern void trapret(void);
 //invokesigret.S
@@ -75,9 +76,9 @@ int
 allocpid(void) 
 {
   int pid;
-  acquire(&ptable.lock);
-  pid = nextpid++;
-  release(&ptable.lock);
+  do{
+        pid = nextpid;       
+  } while (cas(&nextpid,pid,pid+1) == 0);
   return pid;
 }
 
@@ -92,18 +93,18 @@ allocproc(void)
   struct proc *p;
   char *sp;
 
-  acquire(&ptable.lock);
-
+  while (cas(&counter_lock,0,1) == 0);
+  
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if(p->state == UNUSED)
       goto found;
 
-  release(&ptable.lock);
+  counter_lock=0;
   return 0;
 
 found:
   p->state = EMBRYO;
-  release(&ptable.lock);
+  counter_lock =0;
 
   p->pid = allocpid();
 
