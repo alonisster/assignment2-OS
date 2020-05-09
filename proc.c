@@ -93,19 +93,19 @@ allocproc(void)
   struct proc *p;
   char *sp;
 
-  while (cas(&counter_lock,0,1) == 0);
+  pushcli();
+  p = ptable.proc;
+  do {
+    if(p->state != UNUSED)
+      p++;
+    if (p == &ptable.proc[NPROC]) {
+      popcli();
+      return 0; // ptable is full
+    }    
+  } while (!cas(&p->state, UNUSED, EMBRYO));
   
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-    if(p->state == UNUSED)
-      goto found;
-
-  counter_lock=0;
-  return 0;
-
-found:
-  p->state = EMBRYO;
-  counter_lock =0;
-
+  popcli();
+  
   p->pid = allocpid();
 
   // Allocate kernel stack.
