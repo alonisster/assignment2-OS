@@ -1765,8 +1765,12 @@ void check_sigaction(){
   sigaction(3, &dummy, 0);
   kill(getpid(), 3);  
 }
-
-
+void check_sig_kill(){
+   return;
+}
+void check_sig_stop_and_cont(){
+  return;
+}
 
 void sanityCheck(){
   check_sigaction();
@@ -1783,7 +1787,7 @@ rand()
 int
 main(int argc, char *argv[])
 {
-  printf(1, "usertests starting\n");
+  // printf(1, "usertests starting\n");
 
   if(open("usertests.ran", 0) >= 0){
     printf(1, "already ran user tests -- rebuild fs.img\n");
@@ -1792,9 +1796,9 @@ main(int argc, char *argv[])
   close(open("usertests.ran", O_CREATE));
 
   sanityCheck();
-  argptest();
-  createdelete();
-  linkunlink();
+  // argptest();
+  // createdelete();
+  // linkunlink();
   // concreate();
   // fourfiles();
   // sharedfd();
@@ -1814,9 +1818,6 @@ main(int argc, char *argv[])
   // openiputtest();
   // exitiputtest();
   // iputtest();
-
-
-  forktest();
 
   // mem();
   // pipe1();

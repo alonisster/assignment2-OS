@@ -147,10 +147,13 @@ lcr3(uint val)
 static inline int 
 cas(volatile void *addr, int expected, int newval){
   int ret = 0;
-  asm volatile("lock; cmpxchgl %3, (%2)\n\t"
-                "jz %=f\n\t"
-                "movl $1, %0\n\t"
-                "%=:\n\t"
+  asm volatile( "lock;\n\t"
+                "cmpxchgl %3, (%2)\n\t"
+                "pushfl\n\t"
+                "popl %%eax\n\t"
+                "andl $0x0040, %%eax\n\t"
+                "shrl $6, %%eax\n\t"
+                "movl %%eax, %0\n\t"
                 : "=m"(ret)
                 : "a"(expected), "b"(addr), "r"(newval)
                 : "memory");
