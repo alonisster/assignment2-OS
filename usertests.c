@@ -1796,20 +1796,22 @@ main(int argc, char *argv[])
   close(open("usertests.ran", O_CREATE));
 
   sanityCheck();
-  // argptest();
-  // createdelete();
-  // linkunlink();
-  // concreate();
-  // fourfiles();
-  // sharedfd();
+  argptest();
+  createdelete();
+  linkunlink();
+  concreate();
+  fourfiles();
+  sharedfd();
 
-  // bigargtest();
-  // bigwrite();
-  // bigargtest();
-  // bsstest();
+  forktest();
+
+  bigargtest();
+  bigwrite();
+  bigargtest();
+  bsstest();
   // sbrktest();
   // validatetest();
-
+  
   // opentest();
   // writetest();
   // writetest1();
@@ -1832,7 +1834,7 @@ main(int argc, char *argv[])
   // unlinkread();
   // dirfile();
   // iref();
-  // forktest();
+  
   // bigdir(); // slow
 
   // uio();
