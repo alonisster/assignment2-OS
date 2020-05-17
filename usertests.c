@@ -1796,7 +1796,39 @@ main(int argc, char *argv[])
   close(open("usertests.ran", O_CREATE));
 
 
-  bigfile();
+  argptest();
+  createdelete();
+  linkunlink();
+  concreate();
+  fourfiles();
+  sharedfd();
+
+  forktest();
+
+  bigargtest();
+  bigwrite();
+  bigargtest();
+  bsstest();
+  sbrktest();
+  validatetest();
+  
+  opentest();
+  writetest();
+  writetest1();
+  createtest();
+
+  openiputtest();
+  exitiputtest();
+  iputtest();
+
+  mem();
+  pipe1();
+  preempt();
+  exitwait();
+
+  rmdot();
+  fourteen();
+  bigfile();//
   subdir();
   linktest();
   unlinkread();

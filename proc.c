@@ -383,6 +383,7 @@ scheduler(void)
 {
   struct proc *p;
   struct cpu *c = mycpu();
+  int kill_bit = 1 << SIGKILL;
   c->proc = 0;
   
   for(;;){
@@ -393,6 +394,16 @@ scheduler(void)
     // acquire(&ptable.lock);
     pushcli();
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(cas(&p->state, SLEEPING, NEG_SLEEPING)){
+        if(p->pending_signals & kill_bit){
+          p->state = RUNNABLE;
+          p->killed = 1;
+          p->is_stopped = 0;
+        }else{
+          cas(&p->state, NEG_SLEEPING, SLEEPING);
+        }
+      }
+
       if(!cas(&p->state,RUNNABLE, NEG_RUNNING))
         continue;
 

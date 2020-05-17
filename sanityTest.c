@@ -236,6 +236,19 @@ void check_system_without_lock(){
   printf(1, "test check_system_without_lock is ok" );
 }
 
+void sleep_kill_test(){
+  int pid1;
+  pid1=fork();
+  if(pid1==0){
+    sleep(1000);
+  }else  {
+    sleep(10);
+    kill(pid1, SIGKILL);
+    wait();
+  }
+  printf(1, "test passed- finished before child finishes sleeping\n");  
+}
+
 
 int main(){
     test_stop_cont();
@@ -247,5 +260,6 @@ int main(){
     test_cas();
     test_user_handler();
     check_system_without_lock();
+    sleep_kill_test();
     exit();
 }
