@@ -72,8 +72,72 @@ void test_kill_sig(){
     }
     
 }
-void test_stop_cont(){
+void test_stop_cont(){  
+  int pid = fork();
+  if(pid ==0){
+    for (int i = 0; i < 300; i++)
+    {
+      printf(1, "%d\n", i);
+    }
+    exit();
+  }else {
+    sleep(50);
+    printf(1,"sending stop to child. should stop\n");
+    kill(pid, SIGSTOP);
+    printf(1,"Child is frozen for now.\n");
+    sleep(200);
+    kill(pid, SIGCONT);
+    wait();
+  }
+}
 
+void test_stop_cont_not_default(){
+  struct sigaction action;
+  action.sa_handler = (void*)SIGCONT;
+  sigaction(SIG_TEST, &action, 0);
+  struct sigaction actionStop;
+  actionStop.sa_handler = (void*)SIGSTOP;
+  sigaction(6, &actionStop, 0);
+  
+
+  int pid = fork();
+  if(pid ==0){
+    for (int i = 0; i < 300; i++)
+    {
+      printf(1, "%d\n", i);
+    }
+    exit();
+  }else {
+    sleep(50);
+    printf(1,"sending stop to child. should stop\n");
+    kill(pid, 6);
+    printf(1,"Child is frozen for now.\n");
+    sleep(200);
+    kill(pid, SIG_TEST);
+    wait();
+  }
+}
+
+void test_kill_after_stop(){
+  int pid = fork();
+  if(pid ==0){
+    for (int i = 0; i < 300; i++)
+    {
+      printf(1, "%d\n", i);
+    }
+    exit();
+  }else {
+    sleep(50);
+    printf(1,"sending stop to child. should stop\n");
+    kill(pid, SIGSTOP);
+    printf(1,"Child is frozen for now.\n");
+    sleep(200);
+    kill(pid, SIGKILL);
+    printf(1,"sent kill to child\n");
+
+    wait();
+    printf(1,"Child killed. test passed.\n");
+  }
 }
 
 void test_sigprocmask_and_inherit_fork_mask(){
@@ -116,11 +180,72 @@ void test_cas(){
 }
 
 
+void check_system_without_lock(){
+  int pid1,pid2,pid3;
+  pid1=fork();
+  if(pid1==0){
+    pid2=fork();
+    if(pid2==0){
+        for (int i = 0; i < 100; i++)
+            printf(1, "%d\n", i);
+        sleep(50);
+        printf(1, "pid2 is alive" );
+        sleep(50);
+        printf(1, "pid2 exit" );
+        exit();
+    
+    }
+    else{
+      for (int i = 0; i < 100; i++)
+        printf(1, "%d\n", i);
+      sleep(50);
+      printf(1, "pid1 is alive\n" );
+      sleep(50);
+      printf(1, "pid1 exit\n" );
+      wait();
+      exit();
+    }
+  }
+  else{
+    pid3=fork();
+    if(pid3==0){
+       for (int i = 0; i < 100; i++){
+            printf(1, "%d\n", i);
+       }
+        sleep(50);
+        printf(1, "pid3 is alive\n" );
+        sleep(50);
+        printf(1, "pid3 exit\n" );
+        exit();
+    
+    }
+    else{
+      for (int i = 0; i < 100; i++)
+        printf(1, "%d\n", i);
+      sleep(50);
+      printf(1, "perent is alive\n" );
+      sleep(50);
+      printf(1, "perent exit\n" );
+      
+    }
+  }
+  
+  wait();
+  wait();
+
+  printf(1, "test check_system_without_lock is ok" );
+}
+
+
 int main(){
+    test_stop_cont();
+    test_stop_cont_not_default();
+    test_kill_after_stop();
     test_sigaction();
     test_kill_sig();
     test_sigprocmask_and_inherit_fork_mask();
     test_cas();
     test_user_handler();
+    check_system_without_lock();
     exit();
 }

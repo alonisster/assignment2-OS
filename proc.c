@@ -509,6 +509,9 @@ sleep(void *chan, struct spinlock *lk)
   
   // Go to sleep.
   p->chan = chan;
+  if(p->state != RUNNING){
+    cprintf("%s %d\n","problemmmmmmmmmmmmmmmmmmmmm. state is ", p->state);
+  }
   p->state = NEG_SLEEPING;
   // if(!cas(&p->state, p->state, -1*SLEEPING)){
   //   panic("sleep function problem\n");
@@ -568,7 +571,7 @@ kill(int pid, int signum)
   pushcli();
   int signumBit= 1 << signum;  
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-    if(p->pid == pid){
+    if(p->pid == pid && p->signal_handlers[signum].sa_handler != (void*)SIG_IGN){
       do{
         tempPending = p->pending_signals;
       }while(!cas(&p->pending_signals, tempPending, tempPending|signumBit));
@@ -604,13 +607,13 @@ kill(int pid, int signum)
 void handleKill(){
     struct proc * curproc = myproc();
     curproc->killed = 1;
+    curproc->is_stopped = 0;
     //Wake process from sleep if necessary.
     while(cas(&curproc->state, NEG_SLEEPING, NEG_SLEEPING));
     cas(&curproc->state, SLEEPING, RUNNABLE);
 }
 
 void handleStop(){
-  cprintf("%s", "reached handlestop\n");
   struct proc * curproc = myproc();
   curproc->is_stopped =1;
 }
@@ -700,6 +703,10 @@ void handle_all_signals(){
   int tempPending;
   struct proc * curproc = myproc();
   if(curproc ==0){
+    return;
+  }
+  //assures its not a kernel trap
+  if((curproc->tf->cs & 3) != 3){
     return;
   }
   
