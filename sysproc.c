@@ -98,7 +98,7 @@ int sys_sigprocmask(void)
   return sigprocmask(sigmask);  //returns the old mask
 }
 
-int sys_sigaction(void) //int signum, const struct sigaction * act, struct sigaction* oldact );
+int sys_sigaction(void)
 {
   int signum;
   struct sigaction * act;
@@ -113,5 +113,4 @@ int sys_sigaction(void) //int signum, const struct sigaction * act, struct sigac
 int sys_sigret(void){
   sigret();
   return 0;
-  //todo- complete in proc.c too XXXX
 }

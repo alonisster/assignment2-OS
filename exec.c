@@ -31,7 +31,6 @@ exec(char *path, char **argv)
   struct proghdr ph;
   pde_t *pgdir, *oldpgdir;
   struct proc *curproc = myproc();
-  
   init_signal_handler(curproc);
   begin_op();
 

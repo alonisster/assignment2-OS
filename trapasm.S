@@ -21,10 +21,10 @@ alltraps:
   pushl %esp
   call trap
   addl $4, %esp
-  
+
   # Return falls through to trapret...
 .globl trapret
-trapret:  
+trapret:
   call handle_all_signals
   popal
   popl %gs
