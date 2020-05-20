@@ -286,13 +286,12 @@ exit(void)
   cas(&curproc->state, RUNNING, NEG_ZOMBIE);
 
   // Parent might be sleeping in wait().
-  wakeup1(curproc->parent);
 
   // Pass abandoned children to init.
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->parent == curproc){
       p->parent = initproc;
-      cas(&p->state, NEG_ZOMBIE, NEG_ZOMBIE);
+      while(cas(&p->state, NEG_ZOMBIE, NEG_ZOMBIE));
       if(p->state == ZOMBIE)
         wakeup1(initproc);
     }
@@ -314,6 +313,7 @@ wait(void)
   
   pushcli();
   for(;;){
+    curproc->chan = curproc;
     cas(&curproc->state, RUNNING, NEG_SLEEPING);
     // Scan through table looking for exited children.
     havekids = 0;
@@ -321,7 +321,7 @@ wait(void)
       if(p->parent != curproc)
         continue;
       havekids = 1;
-      while(cas(&p->state, NEG_ZOMBIE, ZOMBIE));
+      while(cas(&p->state, NEG_ZOMBIE, NEG_ZOMBIE));
       if(cas(&p->state, ZOMBIE, NEG_UNUSED)){//p->state == ZOMBIE){
         // Found one.
         pid = p->pid;
@@ -335,6 +335,7 @@ wait(void)
         cas(&p->state,NEG_UNUSED, UNUSED);
 
         cas(&curproc->state, NEG_SLEEPING, RUNNING);
+        curproc->chan = 0;
         popcli();        
         return pid;
       }
@@ -343,15 +344,14 @@ wait(void)
     // No point waiting if we don't have any children.
     if(!havekids || curproc->killed){
       cas(&curproc->state, NEG_SLEEPING, RUNNING);
+      curproc->chan = 0;
       popcli();      
       return -1;
     }
 
     // Wait for children to exit.  (See wakeup1 call in proc_exit.)
-    curproc->chan = curproc;
     sched();
     // Tidy up.
-    curproc->chan = 0;
   }
 }
 
@@ -402,7 +402,9 @@ scheduler(void)
       switchkvm();
       cas(&p->state, NEG_SLEEPING, SLEEPING);
       cas(&p->state, NEG_RUNNABLE, RUNNABLE);
-      cas(&p->state, NEG_ZOMBIE, ZOMBIE);
+      if(cas(&p->state, NEG_ZOMBIE, ZOMBIE)){
+          wakeup1(p->parent);
+      };
       // Process is done running for now.
       // It should have changed its p->state before coming back.
       c->proc = 0;

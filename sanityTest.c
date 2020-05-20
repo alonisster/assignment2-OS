@@ -233,7 +233,7 @@ void check_system_without_lock(){
   wait();
   wait();
 
-  printf(1, "test check_system_without_lock is ok" );
+  printf(1, "test check_system_without_lock is ok\n" );
 }
 
 void sleep_kill_test(){
